@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>95e470b3-ac53-4ff4-9ce4-4d4bf951129b</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="8.0.2" />
+    <PackageReference Include="Aspire.Hosting.Dapr" Version="8.0.2" />
+    <PackageReference Include="Aspire.Hosting.Azure.CosmosDB" Version="8.0.2" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="8.0.2" />
+  </ItemGroup>
+
+</Project>
