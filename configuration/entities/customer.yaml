@@ -1,0 +1,6 @@
+kind: Entity
+name: customer
+config:
+  primaryKey: id
+  partitionKey: id
+  typeFullName: IntegrationPlatform.Domain.Customer, IntegrationPlatform.Domain

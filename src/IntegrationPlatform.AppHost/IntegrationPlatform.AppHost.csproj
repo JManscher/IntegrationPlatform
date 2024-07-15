@@ -16,4 +16,12 @@
     <PackageReference Include="Aspire.Hosting.Redis" Version="8.0.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\IntegrationPlatform.Persistor\IntegrationPlatform.Persistor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\configuration\**\*" />
+  </ItemGroup>
+
 </Project>
