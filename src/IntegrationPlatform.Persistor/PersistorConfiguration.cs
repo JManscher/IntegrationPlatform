@@ -21,14 +21,12 @@ public class PersistorConfiguration
         }
 
         PartitionKey = EntityType.GetProperties().FirstOrDefault(p => p.Name.Equals(partitionKey, StringComparison.CurrentCultureIgnoreCase)) ?? throw new NullReferenceException($"Partition key {partitionKey} not found in entity {typeFullName}");
-        PrimaryKey = EntityType.GetProperties().FirstOrDefault(p => p.Name.Equals(primaryKey, StringComparison.InvariantCultureIgnoreCase)) ?? throw new NullReferenceException($"primaryKey {primaryKey} not found in entity {typeFullName}");
         PartitionKeyName = char.ToLowerInvariant(partitionKey[0]) + partitionKey[1..];
     }
     public required Type EntityType { get; init; }
     public required PropertyInfo PartitionKey { get; init; }
     public string PartitionKeyName {get; init;}
     
-    public required PropertyInfo PrimaryKey { get; init; }
     public string GetPartitionKeyValue(object entity)
     {
         return PartitionKey.GetValue(entity)?.ToString() ?? throw new NullReferenceException($"Partition key {PartitionKey.Name} not found in entity {EntityType}");
@@ -36,7 +34,8 @@ public class PersistorConfiguration
 
     public string GetPrimaryKeyValue(object entity)
     {
-        return PrimaryKey.GetValue(entity)?.ToString() ?? throw new NullReferenceException($"Primary key {PrimaryKey.Name} not found in entity {EntityType}");
+        var baseObject = entity as BaseDomainObject;
+        return baseObject!.Id;
     }
 
 }

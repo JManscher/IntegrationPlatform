@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace IntegrationPlatform.Domain;
+﻿namespace IntegrationPlatform.Domain;
 
 public class Order : BaseDomainObject
 {

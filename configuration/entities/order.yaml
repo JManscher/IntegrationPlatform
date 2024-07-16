@@ -1,6 +1,5 @@
 kind: Entity
 name: order
 config:
-  primaryKey: id
   partitionKey: customerId
   typeFullName: IntegrationPlatform.Domain.Order, IntegrationPlatform.Domain

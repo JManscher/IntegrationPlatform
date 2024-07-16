@@ -1,8 +1,6 @@
-﻿using System.Dynamic;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.OpenApi.Models;
-using Newtonsoft.Json.Linq;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace IntegrationPlatform.Persistor;
@@ -49,6 +47,7 @@ public class PersistEntityEventDocumentFilter(PersistorConfiguration configurati
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
         context.SchemaGenerator.GenerateSchema(configuration.EntityType, context.SchemaRepository);
-        context.SchemaRepository.Schemas.Remove(nameof(JToken));
+        context.SchemaRepository.Schemas.Remove(nameof(JsonNode));
+        context.SchemaRepository.Schemas.Remove(nameof(JsonNodeOptions));
     }
 }
