@@ -58,10 +58,16 @@ app.MapPost($"/{name}/persist", async ([FromBody]PersistEntityEvent @event, [Fro
 
     var entity = @event.Entity.Deserialize(config.EntityType, defaultSerializerOptions) ?? throw new NullReferenceException($"Entity is null or not of type {config.EntityType}");
 
+    if(entity.GetType().BaseType != typeof(BaseDomainObject))
+    {
+        throw new InvalidOperationException($"Type {entity.GetType().FullName} must inherit from {nameof(BaseDomainObject)}");
+    }
+
     var partitionKeyValue = config.GetPartitionKeyValue(entity);
     var id = config.GetPrimaryKeyValue(entity);
 
-    entity.GetType().GetProperty("Modified")?.SetValue(entity, DateTimeOffset.UtcNow);
+    var baseEntity = entity as BaseDomainObject;
+    baseEntity!.Modified = DateTimeOffset.UtcNow;
     switch (@event.EventType)
     {
         case EventType.Create:
@@ -71,10 +77,8 @@ app.MapPost($"/{name}/persist", async ([FromBody]PersistEntityEvent @event, [Fro
             await container.UpsertItemAsync(entity, new PartitionKey(partitionKeyValue), cancellationToken: cancellationToken);
             break;
         case EventType.Delete:
-            //TODO: Should use TTL instead of deleting the item, and flag the item as deleted in the database
-            //await container.DeleteItemAsync<object>(id, new PartitionKey(partitionKeyValue));
-            entity.GetType().GetProperty("IsDeleted")?.SetValue(entity, true);
-            var ttlProperty = entity.GetType().GetProperty("TTL");
+            baseEntity.IsDeleted = true;
+            baseEntity.TTL = Convert.ToInt32(TimeSpan.FromHours(1).TotalSeconds);
             await container.UpsertItemAsync(entity, new PartitionKey(partitionKeyValue), cancellationToken: cancellationToken);
             break;
     }
