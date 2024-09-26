@@ -13,8 +13,9 @@ builder.AddDapr((options) =>
     options.EnableTelemetry = true;
 });
 
-
-var entityLocation =  builder.Configuration.GetValue<string>("CONFIGURATION_ENTITIES") ?? "../../configuration/entities"; // Replace with the actual directory path
+string projectDirectory = Directory.GetCurrentDirectory()[..Environment.CurrentDirectory.IndexOf("bin")]; //Gotta handle this better
+string slnRoot = Path.GetFullPath(Path.Combine(projectDirectory, "../.."));
+var entityLocation = Path.Combine(slnRoot, "configuration", "entities");
 
 var entityConfigurations =  EntityConfigurator.GetConfigurations(entityLocation);
 

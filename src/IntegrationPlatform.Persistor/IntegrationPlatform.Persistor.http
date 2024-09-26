@@ -1,6 +1,0 @@
-@IntegrationPlatform.Persistor_HostAddress = http://localhost:5058
-
-GET {{IntegrationPlatform.Persistor_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

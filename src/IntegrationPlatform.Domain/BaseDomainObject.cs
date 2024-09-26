@@ -6,5 +6,5 @@ public class BaseDomainObject
     public required string Id { get; init; }
     public DateTimeOffset? Modified { get; set;}
     public bool IsDeleted {get; set;}
-    public int TTL {get; set;}
+    public int TTL {get; set;} = -1;
 }

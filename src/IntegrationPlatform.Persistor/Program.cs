@@ -1,6 +1,7 @@
 using System.Text.Json;
 using IntegrationPlatform.Domain;
 using IntegrationPlatform.Persistor;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Microsoft.OpenApi.Models;
@@ -51,7 +52,7 @@ await cosmosdb.Database.CreateContainerIfNotExistsAsync(name, $"/{config.Partiti
 var defaultSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
 // Map the endpoint and pass the EntityType to the delegate
-app.MapPost($"/{name}/persist", async ([FromBody]PersistEntityEvent @event, [FromServices]CosmosClient client, [FromServices]PersistorConfiguration config, CancellationToken cancellationToken) =>
+app.MapPost($"/{name}/persist", async Task<Ok> ([FromBody]PersistEntityEvent @event, [FromServices]CosmosClient client, [FromServices]PersistorConfiguration config, CancellationToken cancellationToken) =>
 {
     var container = client.GetContainer("integration-platform", name);
 
