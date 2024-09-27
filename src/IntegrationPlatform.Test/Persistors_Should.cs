@@ -8,14 +8,14 @@ namespace IntegrationPlatform.Test.Tests;
 public class Persistors_Should()
 {
 
-    private static IDistributedApplicationTestingBuilder? appHost;
     private static DistributedApplication? app;
     private const string PersistorTests = "PersistorTests";
+    private static readonly string Id = "Integration-Test-Id";
 
     [Before(Class)]
     public static async Task Initialize()
     {
-        appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.IntegrationPlatform_AppHost>();
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.IntegrationPlatform_AppHost>();
         app = await appHost.BuildAsync();
         await app.StartAsync();
     }
@@ -38,8 +38,8 @@ public class Persistors_Should()
 
     [Test]
     [MethodDataSource(nameof(GetConfigurations))]
-    [NotInParallel(PersistorTests)]
-    public async Task Return_Ok_On_Post(EntityConfiguration entityConfiguration)
+    [NotInParallel(PersistorTests, Order = 1)]
+    public async Task Return_Ok_Create_Event(EntityConfiguration entityConfiguration)
     {
         if(app == null)
             throw new InvalidOperationException("Application is not initialized");
@@ -53,14 +53,13 @@ public class Persistors_Should()
             .WaitAsync(TimeSpan.FromSeconds(30));
 
         // Act
-
         var httpClient = app.CreateHttpClient(entityConfiguration.Name);
         var response = await httpClient.PostAsJsonAsync($"/{entityConfiguration.Name}/persist", new
         {
             EventType = "Create",
             Entity = new
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = Id,
                 Name = "Test",
                 CustomerId = Guid.NewGuid().ToString()
             }
@@ -69,5 +68,43 @@ public class Persistors_Should()
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
     }
+
+    [Test]
+    [MethodDataSource(nameof(GetConfigurations))]
+    [NotInParallel(PersistorTests, Order = 2)]
+    public async Task Return_Ok_On_Delete_Event(EntityConfiguration entityConfiguration)
+    {
+        if(app == null)
+            throw new InvalidOperationException("Application is not initialized");
+        
+        // Arrange
+        var resourceNotificationService =
+            app.Services.GetRequiredService<ResourceNotificationService>();
+            
+        await resourceNotificationService
+            .WaitForResourceAsync(entityConfiguration.Name, KnownResourceStates.Running)
+            .WaitAsync(TimeSpan.FromSeconds(30));
+
+        var id = Guid.NewGuid().ToString();
+        TestContext.Current?.ObjectBag.Add("id", id);
+        TestContext.Current?.ObjectBag.Add("entityName", entityConfiguration.Name);
+
+        // Act
+        var httpClient = app.CreateHttpClient(entityConfiguration.Name);
+        var response = await httpClient.PostAsJsonAsync($"/{entityConfiguration.Name}/persist", new
+        {
+            EventType = "Delete",
+            Entity = new
+            {
+                Id = Id,
+                Name = "Test",
+                CustomerId = Id
+            }
+        });
+
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+
+    }
+
 }
 
