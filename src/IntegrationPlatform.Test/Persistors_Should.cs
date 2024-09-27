@@ -2,42 +2,43 @@ using System.Net;
 using System.Net.Http.Json;
 using IntegrationPlatform.AppHost.Entity;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
 
 namespace IntegrationPlatform.Test.Tests;
 
-public class Persistors_Should(ITestOutputHelper output) : IAsyncLifetime
+public class Persistors_Should()
 {
 
-    private IDistributedApplicationTestingBuilder? appHost;
-    private DistributedApplication? app;
-    private readonly ITestOutputHelper _output = output;
+    private static IDistributedApplicationTestingBuilder? appHost;
+    private static DistributedApplication? app;
+    private const string PersistorTests = "PersistorTests";
 
-    public async Task InitializeAsync()
+    [Before(Class)]
+    public static async Task Initialize()
     {
         appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.IntegrationPlatform_AppHost>();
         app = await appHost.BuildAsync();
         await app.StartAsync();
     }
 
-    public async Task DisposeAsync()
+    [After(Class)]
+    public static async Task Cleanup()
     {
         if(app != null)
             await app.DisposeAsync();
     }
 
-    public static TheoryData<EntityConfiguration> GetConfigurations()
+    public static IEnumerable<EntityConfiguration> GetConfigurations()
     {
         string projectDirectory = Directory.GetCurrentDirectory()[..Environment.CurrentDirectory.IndexOf("bin")];
         string slnRoot = Path.GetFullPath(Path.Combine(projectDirectory, "../.."));
         var entityLocation = Path.Combine(slnRoot, "configuration", "entities");
 
-        var entityConfigurations = EntityConfigurator.GetConfigurations(entityLocation);
-        return new TheoryData<EntityConfiguration>(entityConfigurations);
+        return EntityConfigurator.GetConfigurations(entityLocation);;
     }
 
-    [Theory]
-    [MemberData(nameof(GetConfigurations))]
+    [Test]
+    [MethodDataSource(nameof(GetConfigurations))]
+    [NotInParallel(PersistorTests)]
     public async Task Return_Ok_On_Post(EntityConfiguration entityConfiguration)
     {
         if(app == null)
@@ -52,7 +53,6 @@ public class Persistors_Should(ITestOutputHelper output) : IAsyncLifetime
             .WaitAsync(TimeSpan.FromSeconds(30));
 
         // Act
-        _output.WriteLine($"Testing {entityConfiguration.Name}");
 
         var httpClient = app.CreateHttpClient(entityConfiguration.Name);
         var response = await httpClient.PostAsJsonAsync($"/{entityConfiguration.Name}/persist", new
@@ -66,11 +66,7 @@ public class Persistors_Should(ITestOutputHelper output) : IAsyncLifetime
             }
         });
 
-        var content = await response.Content.ReadAsStringAsync();
-        if(string.IsNullOrEmpty(content) is false)
-            _output.WriteLine(content);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
     }
 }
