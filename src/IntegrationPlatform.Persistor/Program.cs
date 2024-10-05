@@ -46,8 +46,10 @@ app.AddDaprSubscriber();
 var cosmosClient = app.Services.GetRequiredService<CosmosClient>();
 var config = app.Services.GetRequiredService<PersistorConfiguration>();
 
-var cosmosdb = await cosmosClient.CreateDatabaseIfNotExistsAsync("integration-platform");
-await cosmosdb.Database.CreateContainerIfNotExistsAsync(name, $"/{config.PartitionKeyName}");
+var cosmosdb = cosmosClient.GetDatabase("integration-platform");
+
+var container = await cosmosdb.CreateContainerIfNotExistsAsync(name, $"/{config.PartitionKeyName}");
+await container.Container.SetupLastModifiedTrigger(default);
 
 var defaultSerializerOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
@@ -60,26 +62,29 @@ app.MapPost($"/{name}/persist", async Task<Ok> ([FromBody]PersistEntityEvent @ev
 
     if(entity.GetType().BaseType != typeof(BaseDomainObject))
     {
-        throw new InvalidOperationException($"Type {entity.GetType().FullName} must inherit from {nameof(BaseDomainObject)}");
+        throw new InvalidOperationException($"Type {entity.GetType().FullName} must inh erit from {nameof(BaseDomainObject)}");
     }
 
     var partitionKeyValue = config.GetPartitionKeyValue(entity);
     var id = config.GetPrimaryKeyValue(entity);
 
-    var baseEntity = entity as BaseDomainObject;
-    baseEntity!.Modified = DateTimeOffset.UtcNow;
+    var baseEntity = entity as BaseDomainObject ?? throw new NullReferenceException("Entity is not of type BaseDomainObject");
+    
     switch (@event.EventType)
     {
         case EventType.Create:
-            await container.CreateItemAsync(entity, new PartitionKey(partitionKeyValue), cancellationToken: cancellationToken);
+            await container.CreateItemAsync(entity, new PartitionKey(partitionKeyValue), requestOptions: new ItemRequestOptions{PreTriggers = CosmosContainerExtensions.PreTriggers}, cancellationToken: cancellationToken);
             break;
         case EventType.Update:
-            await container.UpsertItemAsync(entity, new PartitionKey(partitionKeyValue), cancellationToken: cancellationToken);
+            await container.UpsertItemAsync(entity, new PartitionKey(partitionKeyValue), requestOptions: new ItemRequestOptions{PreTriggers = CosmosContainerExtensions.PreTriggers}, cancellationToken: cancellationToken);
             break;
         case EventType.Delete:
-            baseEntity.IsDeleted = true;
-            baseEntity.TTL = Convert.ToInt32(TimeSpan.FromHours(1).TotalSeconds);
-            await container.UpsertItemAsync(entity, new PartitionKey(partitionKeyValue), cancellationToken: cancellationToken);
+            var patchList = new List<PatchOperation>
+            {
+                PatchOperation.Add("/isDeleted", true),
+                PatchOperation.Add("/ttl", config.TimeToLiveOnDelete)
+            };
+            await container.PatchItemAsync<BaseDomainObject>(baseEntity.Id, new PartitionKey(partitionKeyValue), patchList, requestOptions: new PatchItemRequestOptions{PreTriggers = CosmosContainerExtensions.PreTriggers}, cancellationToken: cancellationToken);
             break;
     }
 

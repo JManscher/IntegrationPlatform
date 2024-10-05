@@ -8,12 +8,16 @@ var builder = DistributedApplication.CreateBuilder(args);
 
 var redis = builder.AddRedis("redis");
 
-builder.AddDapr((options) =>
+builder.AddDapr((options) => 
 {
     options.EnableTelemetry = true;
 });
 
-string projectDirectory = Directory.GetCurrentDirectory()[..Environment.CurrentDirectory.IndexOf("bin")]; //Gotta handle this better
+var index = Environment.CurrentDirectory.IndexOf("bin");
+if(index == -1){
+    index = 0;
+}
+string projectDirectory = Directory.GetCurrentDirectory()[..index]; //Gotta handle this better
 string slnRoot = Path.GetFullPath(Path.Combine(projectDirectory, "../.."));
 var entityLocation = Path.Combine(slnRoot, "configuration", "entities");
 

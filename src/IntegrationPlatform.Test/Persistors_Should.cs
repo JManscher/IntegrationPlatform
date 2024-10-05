@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using IntegrationPlatform.AppHost.Entity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace IntegrationPlatform.Test.Tests;
+namespace IntegrationPlatform.Test;
 
 public class Persistors_Should()
 {
@@ -23,17 +23,25 @@ public class Persistors_Should()
     [After(Class)]
     public static async Task Cleanup()
     {
-        if(app != null)
+        if (app != null) {
+            await app.StopAsync();
             await app.DisposeAsync();
+            app = null;
+        }
+
     }
 
     public static IEnumerable<EntityConfiguration> GetConfigurations()
     {
-        string projectDirectory = Directory.GetCurrentDirectory()[..Environment.CurrentDirectory.IndexOf("bin")];
+        var index = Environment.CurrentDirectory.IndexOf("bin");
+        if(index == -1){
+            index = 0;
+        }
+        string projectDirectory = Directory.GetCurrentDirectory()[..index]; //Gotta handle this better
         string slnRoot = Path.GetFullPath(Path.Combine(projectDirectory, "../.."));
         var entityLocation = Path.Combine(slnRoot, "configuration", "entities");
 
-        return EntityConfigurator.GetConfigurations(entityLocation);;
+        return EntityConfigurator.GetConfigurations(entityLocation); ;
     }
 
     [Test]
@@ -41,13 +49,10 @@ public class Persistors_Should()
     [NotInParallel(PersistorTests, Order = 1)]
     public async Task Return_Ok_Create_Event(EntityConfiguration entityConfiguration)
     {
-        if(app == null)
-            throw new InvalidOperationException("Application is not initialized");
-        
-        // Arrange
-        var resourceNotificationService =
-            app.Services.GetRequiredService<ResourceNotificationService>();
-            
+        if (app == null)
+            throw new InvalidOperationException("App is not initialized");
+
+        var resourceNotificationService = app.Services.GetRequiredService<ResourceNotificationService>();
         await resourceNotificationService
             .WaitForResourceAsync(entityConfiguration.Name, KnownResourceStates.Running)
             .WaitAsync(TimeSpan.FromSeconds(30));
@@ -59,11 +64,15 @@ public class Persistors_Should()
             EventType = "Create",
             Entity = new
             {
-                Id = Id,
+                Id,
                 Name = "Test",
                 CustomerId = Guid.NewGuid().ToString()
             }
         });
+
+        var content = await response.Content.ReadAsStringAsync();
+
+        TestContext.Current?.OutputWriter.WriteLine(content);
 
         await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
 
@@ -74,20 +83,8 @@ public class Persistors_Should()
     [NotInParallel(PersistorTests, Order = 2)]
     public async Task Return_Ok_On_Delete_Event(EntityConfiguration entityConfiguration)
     {
-        if(app == null)
-            throw new InvalidOperationException("Application is not initialized");
-        
-        // Arrange
-        var resourceNotificationService =
-            app.Services.GetRequiredService<ResourceNotificationService>();
-            
-        await resourceNotificationService
-            .WaitForResourceAsync(entityConfiguration.Name, KnownResourceStates.Running)
-            .WaitAsync(TimeSpan.FromSeconds(30));
-
-        var id = Guid.NewGuid().ToString();
-        TestContext.Current?.ObjectBag.Add("id", id);
-        TestContext.Current?.ObjectBag.Add("entityName", entityConfiguration.Name);
+        if (app == null)
+            throw new InvalidOperationException("App is not initialized");
 
         // Act
         var httpClient = app.CreateHttpClient(entityConfiguration.Name);
@@ -96,7 +93,7 @@ public class Persistors_Should()
             EventType = "Delete",
             Entity = new
             {
-                Id = Id,
+                Id,
                 Name = "Test",
                 CustomerId = Id
             }
